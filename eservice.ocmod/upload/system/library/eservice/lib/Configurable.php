@@ -13,7 +13,7 @@ class Configurable implements \ArrayAccess, \Iterator, \Serializable {
     const ACTION_VOID = "VOID";
     const ACTION_PURCHASE = "PURCHASE";
     const ACTION_REFUND = "REFUND";
-    const ACTION_STATUS_CHECK = "STATUS_CHECK";
+    const ACTION_STATUS_CHECK = "GET_STATUS";
     const ACTION_AVAILABLE_PAYMENT_SOLUTION = "GET_AVAILABLE_PAYSOLS";
     const ACTION_VERIFY = "VERIFY";
     const CHANNEL_ECOM = "ECOM";
@@ -199,13 +199,25 @@ class Configurable implements \ArrayAccess, \Iterator, \Serializable {
         }
         return $this;
     }
-
+	
+	public function environmentUrls() {
+        foreach (func_get_args()[0] as $k => $v) {
+            $this->$k = $v;
+        }
+        Config::setUrls($this->tokenURL, $this->paymentsURL, $this->baseUrl, $this->jsApiUrl);
+        return $this;
+    }
+	
     public function baseUrl() {
         return Config::$BaseUrl;
     }
 
     public function javaScriptUrl() {
         return Config::$JavaScriptUrl;
+    }
+
+    public function mobileUrl() {
+      return Config::$BaseUrl;
     }
 
 }

@@ -14,7 +14,7 @@ class Request extends Executable {
     private function millis_float() {
         // note about microtime(): "This function is only available on operating systems that support the gettimeofday() system call."
         list($usec, $sec) = explode(" ", microtime());
-        return round(((float)$usec + (float)$sec) * 1000);
+        return sprintf('%1.0f', round(((float)$usec + (float)$sec) * 1000));
     }
 
     public function __construct() {

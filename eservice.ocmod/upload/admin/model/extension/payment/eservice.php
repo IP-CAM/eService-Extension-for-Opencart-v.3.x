@@ -1,6 +1,12 @@
 <?php
 require_once modification(DIR_SYSTEM . 'library/eservice/payments.php');
 class ModelExtensionPaymentEservice extends Model {
+    /**
+     * parameters to initiate the SDK payment.
+     *
+     */
+    protected $environment_params;
+    
     public function install() {
         $this->db->query("
 			CREATE TABLE IF NOT EXISTS `" . DB_PREFIX . "eservice_order` (
@@ -89,12 +95,10 @@ class ModelExtensionPaymentEservice extends Model {
 	    if ($order && $capture_amount > 0 ) {
 	        
 	        $this->initConfig();
-	        $payments = new Payments\Payments();
+	        $payments = (new Payments\Payments())->environmentUrls($this->environment_params);
 	        $capture = $payments->capture();
 	        $capture->originalMerchantTxId($order['merchant_tx_id'])->
-	        action('CAPTURE')->
 	        amount($capture_amount)->
-	        timestamp(round(microtime(true) * 1000))->
 	        allowOriginUrl($this->getAllowOriginUrl());
 	        $result = $capture->execute();
 	        $this->logger('capture: '.$result->result.json_encode($result->errors));
@@ -113,11 +117,9 @@ class ModelExtensionPaymentEservice extends Model {
 	    if ($order) {
 	        
 	        $this->initConfig();
-	        $payments = new Payments\Payments();
+	        $payments = (new Payments\Payments())->environmentUrls($this->environment_params);
 	        $capture = $payments->void();
 	        $capture->originalMerchantTxId($order['merchant_tx_id'])->
-	        action('VOID')->
-	        timestamp(round(microtime(true) * 1000))->
 	        allowOriginUrl($this->getAllowOriginUrl());
 	        $result = $capture->execute();
 	        if(!isset($result->result) || $result->result != 'success'){
@@ -137,12 +139,10 @@ class ModelExtensionPaymentEservice extends Model {
 	    if ($order && $refund_amount > 0 ) {
 	        
 	        $this->initConfig();
-	        $payments = new Payments\Payments();
+	        $payments = (new Payments\Payments())->environmentUrls($this->environment_params);
 	        $refund = $payments->refund();
 	        $refund->originalMerchantTxId($order['merchant_tx_id'])->
-	        action('REFUND')->
 	        amount($refund_amount)->
-	        timestamp(round(microtime(true) * 1000))->
 	        allowOriginUrl($this->getAllowOriginUrl());
 	        $result = $refund->execute();
 	        $this->logger('refund: '.$result->result.json_encode($result->errors));
@@ -163,23 +163,20 @@ class ModelExtensionPaymentEservice extends Model {
 	}
 	// init the SDK configuration settings
 	private function initConfig(){
-	    Payments\Config::$MerchantId = trim($this->config->get('payment_eservice_clientid'));
-	    Payments\Config::$Password = trim($this->config->get('payment_eservice_password'));
+	    $this->environment_params['merchantId'] =  trim($this->config->get('payment_eservice_clientid'));
+	    $this->environment_params['password'] = trim($this->config->get('payment_eservice_password'));
 	    $testmode = $this->config->get('payment_eservice_testmode');
 	    if ($testmode){
-	        Payments\Config::$TestUrls["SessionTokenRequestUrl"] = $this->config->get('payment_eservice_test_token_url');
-	        Payments\Config::$TestUrls["PaymentOperationActionUrl"] = $this->config->get('payment_eservice_test_payments_url');
-	        Payments\Config::$TestUrls["JavaScriptUrl"] = $this->config->get('payment_eservice_test_javascript_url');
-	        Payments\Config::$TestUrls["BaseUrl"] = $this->config->get('payment_eservice_test_cashier_url');
-	        Payments\Config::test();
+	        $this->environment_params['tokenURL'] = $this->config->get('payment_eservice_test_token_url');
+	        $this->environment_params['paymentsURL'] = $this->config->get('payment_eservice_test_payments_url');
+	        $this->environment_params['baseUrl'] = $this->config->get('payment_eservice_test_cashier_url');
+	        $this->environment_params['jsApiUrl'] = $this->config->get('payment_eservice_test_javascript_url');
 	    }else{
-	        Payments\Config::$ProductionUrls["SessionTokenRequestUrl"] = $this->config->get('payment_eservice_token_url');
-	        Payments\Config::$ProductionUrls["PaymentOperationActionUrl"] = $this->config->get('payment_eservice_payments_url');
-	        Payments\Config::$ProductionUrls["JavaScriptUrl"] = $this->config->get('payment_eservice_javascript_url');
-	        Payments\Config::$ProductionUrls["BaseUrl"] = $this->config->get('payment_eservice_cashier_url');
-	        Payments\Config::production();
+	        $this->environment_params['tokenURL'] = $this->config->get('payment_eservice_token_url');
+	        $this->environment_params['paymentsURL'] = $this->config->get('payment_eservice_payments_url');
+	        $this->environment_params['baseUrl'] = $this->config->get('payment_eservice_cashier_url');
+	        $this->environment_params['jsApiUrl'] = $this->config->get('payment_eservice_javascript_url');
 	    }
-	    
 	}
 	private function getAllowOriginUrl(){
 	    $parse_result = parse_url(HTTPS_SERVER);

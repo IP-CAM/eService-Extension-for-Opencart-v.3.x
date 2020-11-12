@@ -1,6 +1,12 @@
 <?php
 require_once modification(DIR_SYSTEM . 'library/eservice/payments.php');
 class ControllerExtensionPaymentEservice extends Controller {
+    /**
+     * parameters to initiate the SDK payment.
+     *
+     */
+    protected $environment_params;
+    
 	public function index() {
 		if ($order_info = $this->model_checkout_order->getOrder($this->session->data['order_id'])) {
 			$this->load->model('checkout/order');
@@ -21,7 +27,6 @@ class ControllerExtensionPaymentEservice extends Controller {
 			$post_data['allowOriginUrl'] = $this->getAllowOriginUrl();
 			$post_data['merchantLandingPageUrl'] = html_entity_decode($this->url->link('extension/payment/eservice/redirectBack', 'order_id='.$this->session->data['order_id'],true), ENT_QUOTES, 'UTF-8');
 			$post_data['merchantNotificationUrl'] = html_entity_decode($this->url->link('extension/payment/eservice/callback', 'order_id='.$this->session->data['order_id'],true), ENT_QUOTES, 'UTF-8');
-			$post_data['timestamp'] = round(microtime(true) * 1000);
 			$post_data['channel'] = 'ECOM';
 			$post_data['language'] = substr($order_info['language_code'], 0,2);
 			$post_data['amount'] = $this->currency->format($order_info['total'], $order_info['currency_code'], $order_info['currency_value'], false);
@@ -33,17 +38,33 @@ class ControllerExtensionPaymentEservice extends Controller {
 			$post_data['country'] = $country_info['iso_code_2'];//get the country from the back office's setting
 			$post_data['customerFirstName'] = html_entity_decode($order_info['payment_firstname'], ENT_QUOTES, 'UTF-8');
 			$post_data['customerLastName'] = html_entity_decode($order_info['payment_lastname'], ENT_QUOTES, 'UTF-8');
-			$post_data['customerBillingAddressPostalCode'] = html_entity_decode($order_info['payment_postcode'], ENT_QUOTES, 'UTF-8');
-			$post_data['customerBillingAddressCity'] = html_entity_decode($order_info['payment_city'], ENT_QUOTES, 'UTF-8');
-			$post_data['customerBillingAddressCountry'] = html_entity_decode($order_info['payment_iso_code_2'], ENT_QUOTES, 'UTF-8');
-			$post_data['customerBillingAddressStreet'] = html_entity_decode($order_info['payment_address_1'], ENT_QUOTES, 'UTF-8');
+			$post_data['customerEmail'] = html_entity_decode($order_info['email'], ENT_QUOTES, 'UTF-8');
+			$post_data['customerPhone'] = html_entity_decode($order_info['telephone'], ENT_QUOTES, 'UTF-8');
+			$post_data['customerId'] = html_entity_decode($order_info['customer_id'], ENT_QUOTES, 'UTF-8');
+			$post_data['userDevice'] = 'DESKTOP';
+			$post_data['userAgent'] = $order_info['user_agent'];
+			$ip = $order_info['ip'];
+			if($ip == '::1'){
+			    $ip = '127.0.0.1';
+			}
+			$post_data['customerIPAddress'] = $ip;
+			$post_data['customerAddressHouseName'] = substr(html_entity_decode($order_info['payment_address_1'], ENT_QUOTES, 'UTF-8'),0,45);
+			$post_data['customerAddressStreet'] = substr(html_entity_decode($order_info['payment_address_1'], ENT_QUOTES, 'UTF-8'),0,45);
+			$post_data['customerAddressCity'] = html_entity_decode($order_info['payment_city'], ENT_QUOTES, 'UTF-8');
+			$post_data['customerAddressPostalCode'] = html_entity_decode($order_info['payment_postcode'], ENT_QUOTES, 'UTF-8');
+			$post_data['customerAddressCountry'] = html_entity_decode($order_info['payment_iso_code_2'], ENT_QUOTES, 'UTF-8');
+			$post_data['customerAddressState'] = html_entity_decode($order_info['payment_zone'], ENT_QUOTES, 'UTF-8');
+			$post_data['customerAddressPhone'] = html_entity_decode($order_info['telephone'], ENT_QUOTES, 'UTF-8');
+			$post_data['merchantChallengeInd'] = '01';
+			$post_data['merchantDecReqInd'] = 'N';
+			$post_data['merchantLandingPageRedirectMethod'] = 'GET';
 			
 			
 			
 			$data = array();
 			try {
 			    $this->initConfig();
-			    $payments = new Payments\Payments();
+			    $payments = (new Payments\Payments())->environmentUrls($this->environment_params);
 			    $payment_eservice_pay_action = $this->config->get('payment_eservice_pay_action'); //1 refer to auth, 0 refer to purchase
 			    if ($payment_eservice_pay_action){
 			        $post_data['action'] = "AUTH";
@@ -62,7 +83,6 @@ class ControllerExtensionPaymentEservice extends Controller {
 			    allowOriginUrl($post_data['allowOriginUrl'])->
 			    merchantLandingPageUrl($post_data['merchantLandingPageUrl'])->
 			    merchantNotificationUrl($post_data['merchantNotificationUrl'])->
-			    timestamp($post_data['timestamp'])->
 			    channel($post_data['channel'])->
 			    language($post_data['language'])->
 			    amount($post_data['amount'])->
@@ -71,10 +91,22 @@ class ControllerExtensionPaymentEservice extends Controller {
 			    country($post_data['country'])->
 			    customerFirstName($post_data['customerFirstName'])->
 			    customerLastName($post_data['customerLastName'])->
-			    customerBillingAddressPostalCode($post_data['customerBillingAddressPostalCode'])->
-			    customerBillingAddressCity($post_data['customerBillingAddressCity'])->
-			    customerBillingAddressCountry($post_data['customerBillingAddressCountry'])->
-			    customerBillingAddressStreet($post_data['customerBillingAddressStreet']);
+			    customerEmail($post_data['customerEmail'])->
+			    customerPhone($post_data['customerPhone'])->
+			    customerId($post_data['customerId'])->
+			    userDevice($post_data['userDevice'])->
+			    userAgent($post_data['userAgent'])->
+			    customerIPAddress($post_data['customerIPAddress'])->
+			    customerAddressHouseName($post_data['customerAddressHouseName'])->
+			    customerAddressStreet($post_data['customerAddressStreet'])->
+			    customerAddressCity($post_data['customerAddressHouseName'])->
+			    customerAddressPostalCode($post_data['customerAddressPostalCode'])->
+			    customerAddressCountry($post_data['customerAddressCountry'])->
+			    customerAddressState($post_data['customerAddressState'])->
+			    customerAddressPhone($post_data['customerAddressPhone'])->
+			    merchantChallengeInd($post_data['merchantChallengeInd'])->
+			    merchantDecReqInd($post_data['merchantDecReqInd'])->
+			    merchantLandingPageRedirectMethod($post_data['merchantLandingPageRedirectMethod']);
 			    $res = $payments_request->token();
 			} catch (Exception $e) {
 			    $data['error'] = $this->language->get('text_error_connect_gateway');
@@ -116,23 +148,20 @@ class ControllerExtensionPaymentEservice extends Controller {
 	}
 	// init the SDK configuration settings
 	private function initConfig(){
-	    Payments\Config::$MerchantId = trim($this->config->get('payment_eservice_clientid'));
-	    Payments\Config::$Password = trim($this->config->get('payment_eservice_password'));
+	    $this->environment_params['merchantId'] =  trim($this->config->get('payment_eservice_clientid'));
+	    $this->environment_params['password'] = trim($this->config->get('payment_eservice_password'));
 	    $testmode = $this->config->get('payment_eservice_testmode');
 	    if ($testmode){
-	        Payments\Config::$TestUrls["SessionTokenRequestUrl"] = $this->config->get('payment_eservice_test_token_url');
-	        Payments\Config::$TestUrls["PaymentOperationActionUrl"] = $this->config->get('payment_eservice_test_payments_url');
-	        Payments\Config::$TestUrls["JavaScriptUrl"] = $this->config->get('payment_eservice_test_javascript_url');
-	        Payments\Config::$TestUrls["BaseUrl"] = $this->config->get('payment_eservice_test_cashier_url');
-	        Payments\Config::test();
+	        $this->environment_params['tokenURL'] = $this->config->get('payment_eservice_test_token_url');
+	        $this->environment_params['paymentsURL'] = $this->config->get('payment_eservice_test_payments_url');
+	        $this->environment_params['baseUrl'] = $this->config->get('payment_eservice_test_cashier_url');
+	        $this->environment_params['jsApiUrl'] = $this->config->get('payment_eservice_test_javascript_url');
 	    }else{
-	        Payments\Config::$ProductionUrls["SessionTokenRequestUrl"] = $this->config->get('payment_eservice_token_url');
-	        Payments\Config::$ProductionUrls["PaymentOperationActionUrl"] = $this->config->get('payment_eservice_payments_url');
-	        Payments\Config::$ProductionUrls["JavaScriptUrl"] = $this->config->get('payment_eservice_javascript_url');
-	        Payments\Config::$ProductionUrls["BaseUrl"] = $this->config->get('payment_eservice_cashier_url');
-	        Payments\Config::production();
+	        $this->environment_params['tokenURL'] = $this->config->get('payment_eservice_token_url');
+	        $this->environment_params['paymentsURL'] = $this->config->get('payment_eservice_payments_url');
+	        $this->environment_params['baseUrl'] = $this->config->get('payment_eservice_cashier_url');
+	        $this->environment_params['jsApiUrl'] = $this->config->get('payment_eservice_javascript_url');
 	    }
-	    
 	}
 	//call the Gateway SDK to check for the payment status
 	private function checkStatus($order_id,$merchantTxId){
@@ -140,10 +169,9 @@ class ControllerExtensionPaymentEservice extends Controller {
 	    
 	    try {
 	        $this->initConfig();
-	        $payments = new Payments\Payments();
+	        $payments = (new Payments\Payments())->environmentUrls($this->environment_params);
 	        $status_check = $payments->status_check();
 	        $status_check->merchantTxId($merchantTxId)->
-	        action('GET_STATUS')->
 	        allowOriginUrl($this->getAllowOriginUrl());
 	        $result = $status_check->execute();
 	        
@@ -154,7 +182,7 @@ class ControllerExtensionPaymentEservice extends Controller {
 	        $order_data = array(
 	            'order_id' => $order_id,
 	            'merchant_tx_id' => $merchantTxId,
-	            "total" =>number_format($order_info['total'], 2),
+	            'total' =>$order_info['total'],
 	            'currency_code' => $order_info['currency_code']
 	        );
 	        $this->logger('checkStatus result :'.$result->result);
@@ -212,14 +240,12 @@ class ControllerExtensionPaymentEservice extends Controller {
 	//redirect the user to this url when the transaction is done
 	public function redirectBack(){
 	    $this->load->model('checkout/order');
-	    $post = $this->request->post;
-	    $this->logger('redirectBack:'.json_encode($post));
-	    if(!isset($post['merchantTxId']) || !isset($this->request->get['order_id'])){
+	    if(!isset($this->request->get['merchantTxId']) || !isset($this->request->get['order_id'])){
 	        $this->response->redirect($this->url->link('checkout/checkout', '', true));
 	        exit;
 	    }else{
 	        $order_id = $this->request->get['order_id'];
-	        $merchantTxId = $post['merchantTxId'];
+	        $merchantTxId = $this->request->get['merchantTxId'];
 	    }
 	    $this->checkStatus($order_id,$merchantTxId);
 	    
